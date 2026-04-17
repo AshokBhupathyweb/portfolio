@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F.R.I.D.A.Y v9 — AI Personal Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --arc:#00d4ff; --arc-dim:#0088aa; --arc-glow:rgba(0,212,255,0.4); --arc-deep:rgba(0,212,255,0.08);
+    --gold:#ffd700; --red:#ff3c3c; --green:#00ff88;
+    --bg:#020b14; --panel:rgba(0,20,40,0.85); --border:rgba(0,212,255,0.2); --text:#c8eaf5; --text-dim:#4a7a99;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:'Exo 2',sans-serif;color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:40px 40px;animation:gridMove 20s linear infinite;pointer-events:none;z-index:0;}
+  body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,212,255,0.08) 0%,transparent 60%),radial-gradient(ellipse at 100% 100%,rgba(255,60,60,0.05) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  @keyframes gridMove{0%{transform:translateY(0)}100%{transform:translateY(40px)}}
+
+  /* BANNERS */
+  .mic-banner{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,215,0,0.12);border-bottom:1px solid var(--gold);padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:16px;font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--gold);}
+  .mic-banner-btn{padding:7px 18px;background:var(--gold);color:#000;border:none;font-family:'Orbitron',monospace;font-size:0.65rem;letter-spacing:0.1em;cursor:pointer;font-weight:700;border-radius:2px;}
+  .mic-banner.hidden{display:none;}
+  #reminderToast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:300;background:rgba(0,10,25,0.97);border:2px solid var(--red);padding:14px 24px;font-family:'Orbitron',monospace;font-size:0.75rem;color:var(--red);text-align:center;min-width:320px;display:none;box-shadow:0 0 30px rgba(255,60,60,0.5);}
+  @keyframes toastPop{from{transform:translateX(-50%) scale(0.8);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+  #connectionBanner{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(255,60,60,0.15);border-top:1px solid var(--red);padding:6px 20px;display:none;align-items:center;justify-content:center;gap:12px;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--red);}
+
+  /* TOPBAR */
+  .topbar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border);background:rgba(0,10,25,0.95);backdrop-filter:blur(10px);flex-shrink:0;gap:10px;}
+  .logo{font-family:'Orbitron',monospace;font-size:1.15rem;font-weight:900;letter-spacing:0.3em;color:var(--arc);text-shadow:0 0 20px var(--arc-glow);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .arc-reactor{width:30px;height:30px;border-radius:50%;border:2px solid var(--arc);display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px var(--arc-glow);animation:reactorPulse 2s ease-in-out infinite;position:relative;flex-shrink:0;}
+  .arc-reactor::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--arc);animation:reactorPulse 2s ease-in-out infinite reverse;}
+  .arc-reactor::after{content:'';position:absolute;width:7px;height:7px;border-radius:50%;background:var(--arc);box-shadow:0 0 8px var(--arc);}
+  @keyframes reactorPulse{0%,100%{box-shadow:0 0 15px var(--arc-glow),inset 0 0 10px rgba(0,212,255,0.1)}50%{box-shadow:0 0 30px var(--arc-glow),0 0 60px rgba(0,212,255,0.15),inset 0 0 20px rgba(0,212,255,0.2)}}
+  .topbar-center{display:flex;align-items:center;gap:8px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .monitor-btn{font-family:'Orbitron',monospace;font-size:0.56rem;letter-spacing:0.1em;padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;transition:all 0.25s;display:flex;align-items:center;gap:5px;border-radius:2px;white-space:nowrap;}
+  .monitor-btn:hover{border-color:var(--arc);color:var(--arc);background:var(--arc-deep);}
+  .monitor-btn.active-cam{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.08);box-shadow:0 0 10px rgba(0,255,136,0.25);}
+  .monitor-btn.active-screen{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,0.08);box-shadow:0 0 10px rgba(255,215,0,0.25);}
+  .monitor-btn.active-pip{border-color:#a855f7;color:#a855f7;background:rgba(168,85,247,0.08);box-shadow:0 0 10px rgba(168,85,247,0.25);}
+  .monitor-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:blink 1.5s ease-in-out infinite;}
+  .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .status-bar{display:flex;gap:12px;align-items:center;}
+  .status-item{font-family:'Share Tech Mono',monospace;font-size:0.58rem;color:var(--text-dim);display:flex;align-items:center;gap:5px;}
+  .status-dot{width:5px;height:5px;border-radius:50%;background:var(--arc);box-shadow:0 0 5px var(--arc);animation:blink 2s ease-in-out infinite;}
+  .status-dot.red{background:var(--red);box-shadow:0 0 5px var(--red);}
+  .status-dot.gold{background:var(--gold);box-shadow:0 0 5px var(--gold);}
+  .status-dot.green{background:var(--green);box-shadow:0 0 5px var(--green);}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+  .api-setup-btn{font-family:'Orbitron',monospace;font-size:0.56rem;letter-spacing:0.15em;padding:6px 10px;background:transparent;border:1px solid var(--arc);color:var(--arc);cursor:pointer;transition:all 0.2s;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
+  .api-setup-btn:hover{background:var(--arc-deep);box-shadow:0 0 12px var(--arc-glow);}
+
+  /* FLOATING PREVIEWS — with drag handle for movability */
+  .floating-preview{position:fixed;z-index:50;border:1px solid;border-radius:4px;overflow:hidden;box-shadow:0 0 20px rgba(0,0,0,0.8);display:none;flex-direction:column;}
+  #cameraPreviewWrap{bottom:90px;right:260px;width:160px;border-color:var(--green);box-shadow:0 0 12px rgba(0,255,136,0.3);}
+  #screenPreviewWrap{bottom:230px;right:260px;width:200px;border-color:var(--gold);box-shadow:0 0 12px rgba(255,215,0,0.3);}
+  /* ★ FIX: drag handle so you can move the preview by its header */
+  .preview-handle{display:flex;align-items:center;justify-content:space-between;padding:3px 6px;background:rgba(0,0,0,0.8);cursor:grab;height:22px;flex-shrink:0;user-select:none;}
+  .preview-handle:active{cursor:grabbing;}
+  .preview-label{font-family:'Orbitron',monospace;font-size:0.42rem;letter-spacing:0.08em;padding:1px 4px;border-radius:2px;}
+  #cameraPreviewWrap .preview-label{color:var(--green);}
+  #screenPreviewWrap .preview-label{color:var(--gold);}
+  .preview-close{background:rgba(255,60,60,0.75);color:#fff;border:none;width:14px;height:14px;border-radius:50%;cursor:pointer;font-size:0.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .preview-video{width:100%;height:110px;object-fit:cover;display:block;pointer-events:none;}/* pointer-events:none prevents video from eating mouse events */
+
+  /* MAIN */
+  .main{flex:1;display:flex;overflow:hidden;position:relative;z-index:1;}
+
+  /* LEFT PANEL */
+  .panel-left{width:245px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:rgba(0,8,20,0.6);backdrop-filter:blur(5px);overflow-y:auto;}
+  .panel-left::-webkit-scrollbar{width:3px;} .panel-left::-webkit-scrollbar-thumb{background:var(--border);}
+  .friday-avatar{padding:18px;display:flex;flex-direction:column;align-items:center;border-bottom:1px solid var(--border);}
+  .avatar-ring{width:88px;height:88px;position:relative;margin-bottom:10px;}
+  .avatar-ring svg{width:100%;height:100%;animation:rotateSlow 8s linear infinite;}
+  .avatar-core{position:absolute;inset:13px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.3) 0%,rgba(0,30,60,0.8) 70%);border:1px solid var(--arc);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:1rem;font-weight:900;color:var(--arc);text-shadow:0 0 12px var(--arc-glow);box-shadow:0 0 18px var(--arc-glow);}
+  @keyframes rotateSlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .avatar-name{font-family:'Orbitron',monospace;font-size:0.88rem;font-weight:700;color:var(--arc);letter-spacing:0.3em;text-shadow:0 0 8px var(--arc-glow);}
+  .avatar-tagline{font-size:0.58rem;color:var(--text-dim);letter-spacing:0.15em;margin-top:3px;font-family:'Share Tech Mono',monospace;}
+  .voice-indicator{margin-top:10px;display:flex;align-items:center;gap:3px;height:18px;}
+  .voice-bar{width:3px;border-radius:2px;background:var(--arc);opacity:0.3;transition:height 0.08s,opacity 0.1s;}
+  .voice-bar.active{opacity:1;}
+  .listen-status{margin-top:7px;padding:4px 12px;border-radius:20px;font-family:'Share Tech Mono',monospace;font-size:0.56rem;letter-spacing:0.1em;border:1px solid var(--border);color:var(--text-dim);transition:all 0.3s;}
+  .listen-status.recording{border-color:var(--red);color:var(--red);background:rgba(255,60,60,0.1);}
+  .listen-status.always-on{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.08);}
+  .listen-status.speaking{border-color:var(--arc);color:var(--arc);background:var(--arc-deep);}
+
+  .side-section{padding:12px;border-bottom:1px solid var(--border);}
+  .side-title{font-family:'Orbitron',monospace;font-size:0.56rem;letter-spacing:0.25em;color:var(--arc-dim);margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+  .side-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .task-list{display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto;}
+  .task-list::-webkit-scrollbar{width:2px;} .task-list::-webkit-scrollbar-thumb{background:var(--border);}
+  .task-item{display:flex;align-items:flex-start;gap:6px;padding:5px 7px;background:var(--arc-deep);border:1px solid var(--border);border-radius:2px;font-size:0.65rem;color:var(--text);position:relative;overflow:hidden;}
+  .task-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--arc);}
+  .task-item.done{opacity:0.4;} .task-item.done .task-text{text-decoration:line-through;} .task-item.urgent::before{background:var(--red);}
+  .task-check{width:13px;height:13px;border:1px solid var(--arc);border-radius:2px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:0.58rem;color:var(--arc);cursor:pointer;}
+  .task-text{flex:1;line-height:1.4;word-break:break-word;}
+  .task-del{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:0.65rem;padding:0 2px;flex-shrink:0;}
+  .task-del:hover{color:var(--red);}
+  .add-task-row{display:flex;gap:5px;margin-top:6px;}
+  .mini-input{flex:1;background:transparent;border:1px solid var(--border);color:var(--text);font-family:'Exo 2',sans-serif;font-size:0.67rem;padding:5px 7px;outline:none;}
+  .mini-input:focus{border-color:var(--arc);} .mini-input::placeholder{color:var(--text-dim);}
+  .mini-btn{background:var(--arc-deep);border:1px solid var(--arc);color:var(--arc);font-size:0.68rem;padding:5px 8px;cursor:pointer;font-family:'Orbitron',monospace;transition:all 0.2s;white-space:nowrap;}
+  .mini-btn:hover{background:rgba(0,212,255,0.18);}
+  .notes-area{width:100%;min-height:70px;background:transparent;border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.63rem;padding:7px;outline:none;resize:none;line-height:1.6;}
+  .notes-area:focus{border-color:var(--arc);}
+  .notes-saved{font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:var(--green);margin-top:3px;height:12px;transition:opacity 0.5s;}
+  .schedule-list{display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;}
+  .schedule-list::-webkit-scrollbar{width:2px;} .schedule-list::-webkit-scrollbar-thumb{background:var(--border);}
+  .sched-item{display:flex;gap:7px;align-items:center;font-size:0.63rem;padding:4px 7px;background:rgba(255,215,0,0.04);border-left:2px solid var(--gold);}
+  .sched-time{font-family:'Share Tech Mono',monospace;color:var(--gold);font-size:0.58rem;white-space:nowrap;}
+  .sched-del{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:0.65rem;padding:0 2px;margin-left:auto;}
+  .sched-del:hover{color:var(--red);}
+  .sched-add-row{display:flex;gap:4px;margin-top:6px;}
+  .sched-time-input{width:68px;background:transparent;border:1px solid var(--border);color:var(--gold);font-family:'Share Tech Mono',monospace;font-size:0.6rem;padding:4px 5px;outline:none;}
+  .sched-time-input:focus{border-color:var(--gold);}
+
+  /* CENTER */
+  .panel-center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+  .chat-header{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(0,5,15,0.5);flex-shrink:0;}
+  .chat-header-title{font-family:'Orbitron',monospace;font-size:0.62rem;letter-spacing:0.2em;color:var(--arc);}
+  .mode-tabs{display:flex;gap:2px;}
+  .mode-tab{padding:4px 10px;font-family:'Orbitron',monospace;font-size:0.5rem;letter-spacing:0.15em;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;transition:all 0.2s;clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);}
+  .mode-tab.active{background:var(--arc-deep);border-color:var(--arc);color:var(--arc);}
+  .chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;}
+  .chat-messages::-webkit-scrollbar{width:4px;} .chat-messages::-webkit-scrollbar-thumb{background:var(--border);}
+  .msg{display:flex;gap:10px;animation:msgIn 0.3s ease-out;max-width:88%;}
+  @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{align-self:flex-end;flex-direction:row-reverse;} .msg.friday{align-self:flex-start;} .msg.system{align-self:center;max-width:100%;}
+  .msg-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:700;margin-top:2px;}
+  .msg.friday .msg-avatar{background:radial-gradient(circle,rgba(0,212,255,0.2),rgba(0,20,50,0.8));border:1px solid var(--arc);color:var(--arc);box-shadow:0 0 8px var(--arc-glow);}
+  .msg.user .msg-avatar{background:radial-gradient(circle,rgba(255,215,0,0.15),rgba(20,10,0,0.8));border:1px solid var(--gold);color:var(--gold);}
+  .msg-bubble{padding:9px 12px;border-radius:2px;font-size:0.79rem;line-height:1.6;}
+  .msg.friday .msg-bubble{background:var(--panel);border:1px solid var(--border);border-left:2px solid var(--arc);color:var(--text);}
+  .msg.user .msg-bubble{background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.2);border-right:2px solid var(--gold);color:var(--text);}
+  .msg.system .msg-bubble{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);color:var(--arc-dim);font-family:'Share Tech Mono',monospace;font-size:0.6rem;padding:5px 12px;text-align:center;}
+  .msg-name{font-family:'Orbitron',monospace;font-size:0.5rem;letter-spacing:0.15em;color:var(--text-dim);margin-bottom:3px;}
+  .msg.friday .msg-name{color:var(--arc-dim);} .msg.user .msg-name{color:rgba(255,215,0,0.5);text-align:right;}
+  .typing-dots{display:flex;gap:4px;padding:4px 0;}
+  .typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--arc);animation:typingBounce 1.2s infinite;opacity:0.6;}
+  .typing-dots span:nth-child(2){animation-delay:0.2s} .typing-dots span:nth-child(3){animation-delay:0.4s}
+  @keyframes typingBounce{0%,100%{transform:translateY(0);opacity:0.3}50%{transform:translateY(-4px);opacity:1}}
+  .chat-input-area{padding:11px 16px;border-top:1px solid var(--border);background:rgba(0,5,15,0.7);flex-shrink:0;}
+  .input-row{display:flex;gap:7px;align-items:flex-end;}
+  .chat-input{flex:1;background:rgba(0,15,35,0.8);border:1px solid var(--border);color:var(--text);font-family:'Exo 2',sans-serif;font-size:0.82rem;padding:9px 12px;outline:none;resize:none;min-height:40px;max-height:100px;transition:border-color 0.2s;line-height:1.5;}
+  .chat-input:focus{border-color:var(--arc);box-shadow:0 0 8px rgba(0,212,255,0.1);}
+  .chat-input::placeholder{color:var(--text-dim);}
+  .send-btn{width:40px;height:40px;background:var(--arc-deep);border:1px solid var(--arc);color:var(--arc);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
+  .send-btn:hover{background:rgba(0,212,255,0.18);box-shadow:0 0 12px var(--arc-glow);}
+  .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .voice-controls{display:flex;gap:5px;align-items:center;}
+  .voice-btn{height:40px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.2s;border-radius:2px;font-family:'Orbitron',monospace;font-size:0.52rem;letter-spacing:0.05em;padding:0 9px;white-space:nowrap;}
+  .voice-btn:hover{border-color:var(--arc);color:var(--arc);background:var(--arc-deep);}
+  .voice-btn.recording{border-color:var(--red);color:var(--red);background:rgba(255,60,60,0.1);animation:vbPulse 1s ease-in-out infinite;}
+  .voice-btn.always-on{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.08);box-shadow:0 0 10px rgba(0,255,136,0.2);}
+  @keyframes vbPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,60,60,0.4)}50%{box-shadow:0 0 0 5px rgba(255,60,60,0)}}
+  .input-hint{font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:var(--text-dim);margin-top:5px;}
+
+  /* RIGHT PANEL */
+  .panel-right{width:230px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;background:rgba(0,8,20,0.6);backdrop-filter:blur(5px);overflow-y:auto;}
+  .panel-right::-webkit-scrollbar{width:3px;} .panel-right::-webkit-scrollbar-thumb{background:var(--border);}
+  .dev-section{padding:11px;border-bottom:1px solid var(--border);}
+  .dev-title{font-family:'Orbitron',monospace;font-size:0.54rem;letter-spacing:0.25em;color:var(--arc-dim);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .dev-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .metric-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,212,255,0.05);font-size:0.63rem;}
+  .metric-label{color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:0.58rem;}
+  .metric-val{color:var(--arc);font-family:'Share Tech Mono',monospace;font-size:0.65rem;font-weight:700;}
+  .metric-val.gold{color:var(--gold);} .metric-val.green{color:var(--green);}
+  .progress-bar-wrap{margin-top:3px;height:3px;background:rgba(0,212,255,0.1);border-radius:2px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:var(--arc);border-radius:2px;transition:width 1s ease;}
+  .tip-card{padding:7px 9px;background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.15);border-left:2px solid var(--gold);font-size:0.63rem;line-height:1.5;color:var(--text);border-radius:1px;margin-top:5px;}
+  .tip-label{font-family:'Orbitron',monospace;font-size:0.5rem;color:var(--gold);letter-spacing:0.15em;margin-bottom:3px;}
+  .checkin-card{padding:9px;background:rgba(0,212,255,0.05);border:1px solid var(--border);font-size:0.66rem;line-height:1.5;}
+  .checkin-q{color:var(--text);margin-bottom:7px;}
+  .checkin-options{display:flex;gap:4px;flex-wrap:wrap;}
+  .checkin-opt{padding:3px 7px;border:1px solid var(--border);font-size:0.57rem;font-family:'Share Tech Mono',monospace;color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+  .checkin-opt:hover{border-color:var(--arc);color:var(--arc);background:var(--arc-deep);}
+  .vision-btn{width:100%;margin-top:6px;padding:5px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);color:var(--green);font-family:'Orbitron',monospace;font-size:0.5rem;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;}
+  .reminder-item{display:flex;gap:7px;align-items:center;font-size:0.63rem;padding:5px 7px;background:rgba(255,60,60,0.06);border-left:2px solid var(--red);margin-bottom:4px;}
+  .reminder-time{font-family:'Share Tech Mono',monospace;color:var(--red);font-size:0.58rem;white-space:nowrap;}
+  .reminder-del{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:0.65rem;padding:0 2px;margin-left:auto;}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,5,15,0.85);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);}
+  .modal-overlay.hidden{display:none;}
+  .modal{background:rgba(0,10,25,0.98);border:1px solid var(--arc);padding:26px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 0 50px var(--arc-glow);}
+  .modal-title{font-family:'Orbitron',monospace;font-size:0.82rem;color:var(--arc);letter-spacing:0.2em;margin-bottom:5px;text-shadow:0 0 10px var(--arc-glow);}
+  .modal-sub{font-size:0.65rem;color:var(--text-dim);margin-bottom:18px;font-family:'Share Tech Mono',monospace;}
+  .form-group{margin-bottom:13px;}
+  .form-label{display:block;font-family:'Orbitron',monospace;font-size:0.54rem;letter-spacing:0.2em;color:var(--arc-dim);margin-bottom:5px;}
+  .form-input{width:100%;background:rgba(0,15,35,0.8);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:0.72rem;padding:8px 10px;outline:none;}
+  .form-input:focus{border-color:var(--arc);}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
+  .btn-primary{flex:1;padding:9px;background:var(--arc-deep);border:1px solid var(--arc);color:var(--arc);font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:0.2em;cursor:pointer;transition:all 0.2s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);}
+  .btn-primary:hover{background:rgba(0,212,255,0.18);box-shadow:0 0 18px var(--arc-glow);}
+  .btn-secondary{padding:9px 16px;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:'Orbitron',monospace;font-size:0.6rem;cursor:pointer;}
+
+  .scan-line{position:fixed;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.35),transparent);animation:scanDown 6s linear infinite;pointer-events:none;z-index:5;}
+  @keyframes scanDown{0%{top:0;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100vh;opacity:0}}
+  .corner-dec{position:fixed;width:34px;height:34px;z-index:5;pointer-events:none;}
+  .corner-dec.tl{top:0;left:0;border-top:2px solid var(--arc);border-left:2px solid var(--arc);}
+  .corner-dec.tr{top:0;right:0;border-top:2px solid var(--arc);border-right:2px solid var(--arc);}
+  .corner-dec.bl{bottom:0;left:0;border-bottom:2px solid var(--arc);border-left:2px solid var(--arc);}
+  .corner-dec.br{bottom:0;right:0;border-bottom:2px solid var(--arc);border-right:2px solid var(--arc);}
+  .msg.proactive .msg-bubble{border-color:rgba(255,215,0,0.3);border-left-color:var(--gold);background:rgba(255,215,0,0.04);}
+  .msg-bubble code{font-family:'Share Tech Mono',monospace;font-size:0.73rem;background:rgba(0,212,255,0.08);padding:1px 4px;border-radius:2px;color:var(--arc);}
+  .msg-bubble pre{background:rgba(0,0,0,0.4);border:1px solid var(--border);padding:8px;border-radius:2px;overflow-x:auto;margin:6px 0;font-family:'Share Tech Mono',monospace;font-size:0.68rem;line-height:1.5;white-space:pre-wrap;}
+  @media(max-width:950px){.panel-left{width:195px}.panel-right{display:none}}
+  @media(max-width:620px){.panel-left{display:none}.status-bar{display:none}}
+</style>
+</head>
+<body>
+<div id="reminderToast"></div>
+<div id="connectionBanner">⚠ Connection lost — retrying automatically… <button onclick="document.getElementById('connectionBanner').style.display='none'" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:2px 8px;font-size:0.6rem;cursor:pointer;font-family:'Orbitron',monospace">DISMISS</button></div>
+<div class="mic-banner hidden" id="micBanner">
+  <span>🎙 Grant microphone access — Friday needs this to listen to you</span>
+  <button class="mic-banner-btn" onclick="grantMic()">ALLOW MIC</button>
+  <button style="background:transparent;border:none;color:var(--gold);cursor:pointer;font-size:1rem;" onclick="document.getElementById('micBanner').classList.add('hidden')">✕</button>
+</div>
+<div class="scan-line"></div>
+<div class="corner-dec tl"></div><div class="corner-dec tr"></div>
+<div class="corner-dec bl"></div><div class="corner-dec br"></div>
+
+<!-- FLOATING CAMERA/SCREEN with drag handle -->
+<div class="floating-preview" id="cameraPreviewWrap">
+  <div class="preview-handle" id="camHandle">
+    <span class="preview-label">📷 CAMERA — drag here</span>
+    <button class="preview-close" onclick="toggleCamera()">✕</button>
+  </div>
+  <video class="preview-video" id="cameraVideo" autoplay muted playsinline></video>
+</div>
+<div class="floating-preview" id="screenPreviewWrap">
+  <div class="preview-handle" id="scrHandle">
+    <span class="preview-label">🖥 SCREEN — drag here</span>
+    <button class="preview-close" onclick="toggleScreen()">✕</button>
+  </div>
+  <video class="preview-video" id="screenVideo" autoplay muted playsinline></video>
+</div>
+
+<div class="topbar">
+  <div class="logo"><div class="arc-reactor"></div>F.R.I.D.A.Y</div>
+  <div class="topbar-center">
+    <button class="monitor-btn" id="cameraBtn" onclick="toggleCamera()"><div class="monitor-dot"></div>📷 CAMERA</button>
+    <button class="monitor-btn" id="screenBtn" onclick="toggleScreen()"><div class="monitor-dot"></div>🖥 SCREEN</button>
+    <button class="monitor-btn" id="pipBtn" onclick="toggleFloatingWidget()" title="Float FRIDAY over all tabs"><div class="monitor-dot"></div>📌 FLOAT</button>
+    <span id="clockDisplay" style="font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:var(--text-dim);"></span>
+  </div>
+  <div class="topbar-right">
+    <div class="status-bar">
+      <div class="status-item"><div class="status-dot" id="groqDot"></div>GROQ</div>
+      <div class="status-item"><div class="status-dot green" id="ttsDot"></div>VOICE</div>
+      <div class="status-item"><div class="status-dot green" id="camDot" style="opacity:0.3"></div>CAM</div>
+      <div class="status-item"><div class="status-dot gold" id="screenDot" style="opacity:0.3"></div>SCR</div>
+    </div>
+    <button class="api-setup-btn" onclick="openModal()">⚙ CONFIG</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel-left">
+    <div class="friday-avatar">
+      <div class="avatar-ring">
+        <svg viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="50" r="46" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+          <circle cx="50" cy="50" r="46" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="72 218" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="38" stroke="rgba(0,212,255,0.2)" stroke-width="0.5" stroke-dasharray="30 40" stroke-linecap="round"/>
+        </svg>
+        <div class="avatar-core">FR</div>
+      </div>
+      <div class="avatar-name">F.R.I.D.A.Y</div>
+      <div class="avatar-tagline">FULLY RESPONSIVE INTERFACE</div>
+      <div class="voice-indicator" id="voiceIndicator">
+        <div class="voice-bar" style="height:4px"></div><div class="voice-bar" style="height:10px"></div>
+        <div class="voice-bar" style="height:6px"></div><div class="voice-bar" style="height:14px"></div>
+        <div class="voice-bar" style="height:8px"></div><div class="voice-bar" style="height:12px"></div>
+        <div class="voice-bar" style="height:5px"></div><div class="voice-bar" style="height:9px"></div>
+      </div>
+      <div class="listen-status" id="listenStatus">STANDBY</div>
+    </div>
+    <div class="side-section">
+      <div class="side-title">TASKS</div>
+      <div class="task-list" id="taskList"></div>
+      <div class="add-task-row">
+        <input class="mini-input" id="taskInput" placeholder='Add task or say "add task fix bug"' onkeydown="if(event.key==='Enter'){event.preventDefault();addTask();}">
+        <button class="mini-btn" onclick="addTask()">+</button>
+      </div>
+    </div>
+    <div class="side-section">
+      <div class="side-title">SCHEDULE</div>
+      <div class="schedule-list" id="scheduleList"></div>
+      <div class="sched-add-row">
+        <input class="sched-time-input" id="schedTime" type="time">
+        <input class="mini-input" id="schedEvent" placeholder="Event..." onkeydown="if(event.key==='Enter'){event.preventDefault();addSchedule();}">
+        <button class="mini-btn" style="border-color:var(--gold);color:var(--gold)" onclick="addSchedule()">+</button>
+      </div>
+    </div>
+    <div class="side-section" style="flex:1">
+      <div class="side-title">NOTES</div>
+      <textarea class="notes-area" id="notesArea" placeholder='Quick notes or say "note: remember to..."' rows="5" oninput="debounceSaveNotes()"></textarea>
+      <div class="notes-saved" id="notesSavedBadge"></div>
+    </div>
+  </div>
+
+  <div class="panel-center">
+    <div class="chat-header">
+      <div class="chat-header-title">NEURAL INTERFACE — DIRECT COMM</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setMode('general',this)">GENERAL</button>
+        <button class="mode-tab" onclick="setMode('dev',this)">DEV</button>
+        <button class="mode-tab" onclick="setMode('plan',this)">PLAN</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <div class="input-row">
+        <textarea class="chat-input" id="chatInput" placeholder="Type or speak to Friday..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <div class="voice-controls">
+          <button class="voice-btn" id="tapTalkBtn" onclick="toggleTapTalk()">🎙 TAP</button>
+          <button class="voice-btn" id="alwaysOnBtn" onclick="toggleAlwaysOn()">👂 ALWAYS ON</button>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">🎙 TAP = hold to speak · 👂 ALWAYS ON = hands-free · Say "add task X" · "note: X" · "remind me at 3pm X" · "open youtube" · "play X on youtube" · ENTER = send</div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="dev-section">
+      <div class="dev-title">SESSION</div>
+      <div class="metric-row"><span class="metric-label">TIME</span><span class="metric-val" id="sessionTime">00:00</span></div>
+      <div class="metric-row"><span class="metric-label">MESSAGES</span><span class="metric-val" id="msgCount">0</span></div>
+      <div class="metric-row"><span class="metric-label">MODE</span><span class="metric-val gold" id="currentMode">GENERAL</span></div>
+      <div class="metric-row"><span class="metric-label">TASKS</span><span class="metric-val" id="tasksDone">0/0</span></div>
+      <div class="metric-row"><span class="metric-label">FOCUS</span><span class="metric-val green" id="focusScore">85%</span></div>
+      <div class="metric-row"><span class="metric-label">CAMERA</span><span class="metric-val" id="camStatus">OFF</span></div>
+      <div class="metric-row"><span class="metric-label">SCREEN</span><span class="metric-val" id="screenStatus">OFF</span></div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="focusBar" style="width:85%"></div></div>
+    </div>
+    <div id="visionPanel" class="dev-section" style="display:none">
+      <div class="dev-title">VISION ACTIVE</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.57rem;color:var(--text-dim);line-height:1.4" id="visionStatusText"></div>
+      <button class="vision-btn" onclick="analyzeNow()">🔍 ANALYZE NOW</button>
+    </div>
+    <div class="dev-section">
+      <div class="dev-title">REMINDERS</div>
+      <div id="reminderList" style="display:flex;flex-direction:column;gap:4px;"></div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:var(--text-dim);margin-top:5px">Say "remind me at 3pm to call John"</div>
+    </div>
+    <div class="dev-section">
+      <div class="dev-title">MEMORY</div>
+      <div class="metric-row"><span class="metric-label">SAVED MSGS</span><span class="metric-val" id="savedMsgCount">—</span></div>
+      <div class="metric-row"><span class="metric-label">GROQ</span><span class="metric-val green" id="apiStatus">ONLINE</span></div>
+      <div class="metric-row"><span class="metric-label">TIME SYNC</span><span class="metric-val" id="timeSyncStatus">Local</span></div>
+      <div style="display:flex;gap:4px;margin-top:8px;">
+        <button class="mini-btn" style="flex:1;font-size:0.55rem;padding:4px 6px" onclick="showChatHistory()">📜 HISTORY</button>
+        <button class="mini-btn" style="flex:1;font-size:0.55rem;padding:4px 6px;border-color:var(--gold);color:var(--gold)" onclick="openModal()">⚙ CFG</button>
+      </div>
+    </div>
+    <div class="dev-section">
+      <div class="dev-title">FRIDAY TIP</div>
+      <div class="tip-card"><div class="tip-label">// SAYS</div><div id="tipText">Say "play lo-fi music on youtube" — I'll search it for you instantly.</div></div>
+    </div>
+    <div class="dev-section">
+      <div class="dev-title">CHECK-IN</div>
+      <div class="checkin-card">
+        <div class="checkin-q" id="checkinQ">How's the current task going?</div>
+        <div class="checkin-options" id="checkinOpts">
+          <div class="checkin-opt" onclick="respondCheckin('On track')">On track</div>
+          <div class="checkin-opt" onclick="respondCheckin('Stuck')">Stuck</div>
+          <div class="checkin-opt" onclick="respondCheckin('Break')">Break</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">F.R.I.D.A.Y v9 — CONFIGURATION</div>
+    <div class="modal-sub">// GROQ BRAIN · BROWSER VOICE · PERSISTENT MEMORY · VOICE CONTROL</div>
+    <div class="form-group"><label class="form-label">GROQ API KEY</label><input class="form-input" id="groqKey" type="password" placeholder="gsk_..."></div>
+    <div class="form-group"><label class="form-label">YOUR NAME (how Friday calls you)</label><input class="form-input" id="bossName" type="text" placeholder="Boss, Tony, Alex..."></div>
+    <div class="form-group">
+      <label class="form-label">GROQ MODEL</label>
+      <select class="form-input" id="groqModel">
+        <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant ⚡ Fastest</option>
+        <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile — Smartest</option>
+        <option value="gemma2-9b-it">Gemma2 9B</option>
+      </select>
+    </div>
+    <div style="background:rgba(0,212,255,0.05);border:1px solid var(--border);padding:10px 12px;margin-bottom:16px;font-family:'Share Tech Mono',monospace;font-size:0.6rem;line-height:1.7;color:var(--text-dim)">
+      <span style="color:var(--arc)">// VOICE COMMANDS:</span> "add task X" · "note: X" · "remind me at 3pm to X" · "open youtube" · "play X on youtube" · "search for X" · "open github" · "what time is it"<br>
+      <span style="color:var(--arc)">// MEMORY:</span> All chats, tasks, schedule, notes saved permanently in browser<br>
+      <span style="color:var(--arc)">// INTERRUPT:</span> Speak while Friday talks — she stops and listens instantly<br>
+      <span style="color:var(--arc)">// FLOAT:</span> Click 📌 FLOAT to keep Friday visible on all other tabs
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveConfig()">SAVE & APPLY</button>
+      <button class="btn-secondary" onclick="closeModal()">CANCEL</button>
+      <button class="btn-secondary" style="border-color:var(--red);color:var(--red)" onclick="confirmClearChats()">CLEAR CHATS</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ============================================================
+//  F.R.I.D.A.Y v9
+//  ✅ Fixed: SR double-fire bug       ✅ 20s timeout + auto-retry
+//  ✅ Fixed: Draggable camera/screen  ✅ Voice tasks+notes+schedule
+//  ✅ Fixed: TTS sentence splitting   ✅ Tab visibility awareness
+//  ✅ Fixed: Connection banner        ✅ Enhanced browser control
+//  ✅ Fixed: Proactive background     ✅ Config auto-defaults
+//  ✅ Fixed: Always-On auto-start     ✅ Lifetime persistent storage
+// ============================================================
+
+// ─── DEFAULT CONFIG (always pre-loaded, saved over by user prefs) ───
+let config = {
+  groqKey: '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',
+  bossName: 'Boss',
+  groqModel: 'llama-3.1-8b-instant'
+};
+
+// Load saved config from localStorage synchronously (instant, before IndexedDB loads)
+try {
+  const saved = JSON.parse(localStorage.getItem('friday_config') || '{}');
+  if (saved.groqKey) config.groqKey = saved.groqKey;
+  if (saved.bossName) config.bossName = saved.bossName;
+  if (saved.groqModel) config.groqModel = saved.groqModel;
+} catch(e) {}
+
+// ─── STATE ───
+let tasks = [], schedule = [], mode = 'general', msgCount = 0;
+let sessionStart = Date.now(), conversationHistory = [];
+let cameraStream = null, screenStream = null, micStream = null;
+let mediaRecorder = null, audioChunks = [], isTapRecording = false;
+let isAlwaysOn = false, isSpeaking = false, ttsQueue = [];
+let openedTabs = {}, lastOpenedUrl = '';
+let timeOffset = 0, tabHiddenAt = 0;
+let pipVideoEl = null, pipCanvas = null, pipAnimFrame = null;
+let notesSaveTimeout = null;
+let interruptCtx = null, interruptAnalyser = null, interruptActive = false;
+let srInstance = null; // single SR instance — no double-fire
+let apiOnline = true, lastApiAttempt = 0;
+const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+
+// ============================================================
+//  TIME
+// ============================================================
+function getNow() {
+  const now = new Date(Date.now() + timeOffset);
+  const pad = n => String(n).padStart(2,'0');
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const h12 = now.getHours() % 12 || 12;
+  const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+  return {
+    dateStr: `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`,
+    timeStr: `${pad(h12)}:${pad(now.getMinutes())} ${ampm}`,
+    time24:  `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    day: days[now.getDay()], hours: now.getHours(), minutes: now.getMinutes()
+  };
+}
+async function syncTime() {
+  try {
+    const b = Date.now();
+    const r = await fetch('https://worldtimeapi.org/api/timezone/Asia/Kolkata',{cache:'no-store'});
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    timeOffset = new Date(d.datetime).getTime() - Math.round((b + Date.now()) / 2);
+    const el = document.getElementById('timeSyncStatus');
+    if (el) { el.textContent = '✓ SYNCED'; el.style.color = 'var(--green)'; }
+  } catch(e) {
+    const el = document.getElementById('timeSyncStatus');
+    if (el) el.textContent = 'LOCAL';
+  }
+}
+
+// ============================================================
+//  INDEXEDDB
+// ============================================================
+let db = null;
+async function initDB() {
+  return new Promise(resolve => {
+    const req = indexedDB.open('friday_db', 4);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('chats')) d.createObjectStore('chats',{keyPath:'id',autoIncrement:true});
+      if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv',{keyPath:'key'});
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(); };
+    req.onerror = () => resolve();
+  });
+}
+function dbSet(key, value) {
+  if (!db) { localStorage.setItem('fdb_'+key, JSON.stringify(value)); return; }
+  try {
+    const tx = db.transaction('kv','readwrite');
+    tx.objectStore('kv').put({key, value});
+  } catch(e) {}
+  localStorage.setItem('fdb_'+key, JSON.stringify(value)); // always dual-save
+}
+async function dbGet(key) {
+  // Try localStorage first (synchronous backup)
+  try { const v = localStorage.getItem('fdb_'+key); if (v !== null) return JSON.parse(v); } catch(e) {}
+  if (!db) return null;
+  return new Promise(res => {
+    try {
+      const tx = db.transaction('kv','readonly');
+      const req = tx.objectStore('kv').get(key);
+      req.onsuccess = () => res(req.result?.value ?? null);
+      req.onerror = () => res(null);
+    } catch(e) { res(null); }
+  });
+}
+function saveChat(role, content) {
+  if (!db) return;
+  try {
+    const tx = db.transaction('chats','readwrite');
+    tx.objectStore('chats').add({role, content, ts: Date.now()});
+  } catch(e) {}
+}
+async function loadRecentChats(limit=50) {
+  if (!db) return [];
+  return new Promise(res => {
+    try {
+      const tx = db.transaction('chats','readonly');
+      const req = tx.objectStore('chats').getAll();
+      req.onsuccess = () => res((req.result||[]).slice(-limit).map(r=>({role:r.role,content:r.content})));
+      req.onerror = () => res([]);
+    } catch(e) { res([]); }
+  });
+}
+async function clearAllChats() {
+  if (!db) return;
+  return new Promise(res => {
+    const tx = db.transaction('chats','readwrite');
+    tx.objectStore('chats').clear();
+    tx.oncomplete = res;
+  });
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+async function init() {
+  await initDB();
+  await loadState();
+  syncTime();
+  updateClock();
+  updateMetrics();
+  prefetchVoices();
+  initDraggable(); // ← draggable camera/screen (fixed)
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  // Setup SR (single factory)
+  setupSRFactory();
+
+  // Auto-grant mic
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation:true, noiseSuppression:true, sampleRate:44100 }, video:false
+    });
+    document.getElementById('micBanner').classList.add('hidden');
+    // Auto-start Always-On
+    const savedAO = await dbGet('alwaysOnEnabled');
+    if (savedAO !== false) {
+      setTimeout(startAlwaysOn, 1200);
+    }
+  } catch(e) {
+    document.getElementById('micBanner').classList.remove('hidden');
+  }
+
+  // Load conversation history
+  conversationHistory = await loadRecentChats(30);
+
+  // Greet
+  const t = getNow();
+  const pending = tasks.filter(x => !x.done).length;
+  const greet = t.hours < 12 ? 'Good morning' : t.hours < 17 ? 'Good afternoon' : 'Good evening';
+  const msg = `${greet}, ${config.bossName}. It's ${t.timeStr} on ${t.dateStr}. I'm fully online${conversationHistory.length ? ' with '+conversationHistory.length+' messages remembered' : ''}. ${pending} task${pending!==1?'s':''} pending. Just speak — I'm always listening.`;
+  setTimeout(() => { addMsg('friday', msg); fridaySpeak(msg); }, 800);
+
+  // Re-sync time every 30 min
+  setInterval(syncTime, 30 * 60 * 1000);
+
+  // Update storage count every 30s
+  setInterval(updateStorageCount, 30000);
+  updateStorageCount();
+}
+
+// ============================================================
+//  MIC
+// ============================================================
+async function grantMic() {
+  document.getElementById('micBanner').classList.add('hidden');
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+    addSystemMsg('Microphone ready.');
+    if (!isAlwaysOn) startAlwaysOn();
+  } catch(e) { addSystemMsg('Mic denied — allow in browser settings.'); }
+}
+
+// ============================================================
+//  CLOCK
+// ============================================================
+function updateClock() {
+  const t = getNow();
+  const el = document.getElementById('clockDisplay');
+  if (el) el.textContent = t.timeStr + ' · ' + t.day.substring(0,3).toUpperCase();
+  const se = document.getElementById('sessionTime');
+  if (se) {
+    const s = Math.floor((Date.now()-sessionStart)/1000);
+    se.textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  }
+  checkReminders();
+}
+setInterval(updateClock, 1000);
+
+// ============================================================
+//  CAMERA / SCREEN
+// ============================================================
+async function toggleCamera() {
+  const btn = document.getElementById('cameraBtn');
+  const wrap = document.getElementById('cameraPreviewWrap');
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null;
+    wrap.style.display='none'; btn.classList.remove('active-cam');
+    document.getElementById('camDot').style.opacity='0.3';
+    document.getElementById('camStatus').textContent='OFF';
+    document.getElementById('camStatus').style.color='';
+    updateVisionPanel();
+  } else {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({video:{width:320,height:240}});
+      document.getElementById('cameraVideo').srcObject = cameraStream;
+      wrap.style.display='flex'; btn.classList.add('active-cam');
+      document.getElementById('camDot').style.opacity='1';
+      document.getElementById('camStatus').textContent='ON';
+      document.getElementById('camStatus').style.color='var(--green)';
+      updateVisionPanel();
+      addSystemMsg('Camera ON — I can see you now.');
+      fridaySpeak('Camera active. I can see you, '+config.bossName+'.');
+    } catch(e) { addSystemMsg('Camera access denied.'); }
+  }
+}
+async function toggleScreen() {
+  const btn = document.getElementById('screenBtn');
+  const wrap = document.getElementById('screenPreviewWrap');
+  if (screenStream) {
+    screenStream.getTracks().forEach(t=>t.stop()); screenStream=null;
+    wrap.style.display='none'; btn.classList.remove('active-screen');
+    document.getElementById('screenDot').style.opacity='0.3';
+    document.getElementById('screenStatus').textContent='OFF';
+    document.getElementById('screenStatus').style.color='';
+    updateVisionPanel();
+  } else {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:1}});
+      document.getElementById('screenVideo').srcObject = screenStream;
+      wrap.style.display='flex'; btn.classList.add('active-screen');
+      document.getElementById('screenDot').style.opacity='1';
+      document.getElementById('screenStatus').textContent='ON';
+      document.getElementById('screenStatus').style.color='var(--gold)';
+      updateVisionPanel();
+      addSystemMsg('Screen monitoring ON.');
+      fridaySpeak('Screen monitoring active. I can see your display.');
+      screenStream.getTracks()[0].onended = () => {
+        screenStream=null; wrap.style.display='none'; btn.classList.remove('active-screen');
+        document.getElementById('screenDot').style.opacity='0.3';
+        document.getElementById('screenStatus').textContent='OFF';
+        document.getElementById('screenStatus').style.color='';
+        updateVisionPanel();
+      };
+    } catch(e) { addSystemMsg('Screen share cancelled.'); }
+  }
+}
+function updateVisionPanel() {
+  const has = cameraStream||screenStream;
+  document.getElementById('visionPanel').style.display = has?'block':'none';
+  document.getElementById('visionStatusText').textContent = has ? [cameraStream?'camera':'',screenStream?'screen':''].filter(Boolean).join(' + ')+' active' : '';
+}
+function captureFrame(videoEl) {
+  try {
+    const c = document.createElement('canvas');
+    c.width = Math.min(videoEl.videoWidth||640,640); c.height = Math.min(videoEl.videoHeight||480,480);
+    c.getContext('2d').drawImage(videoEl,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',0.5).split(',')[1];
+  } catch(e) { return null; }
+}
+async function analyzeNow() {
+  const p = [cameraStream?'what you see through my camera':'',screenStream?'what is on my screen':''].filter(Boolean);
+  document.getElementById('chatInput').value = 'Describe and analyze ' + p.join(' and ') + '.';
+  await sendMessage();
+}
+
+// ============================================================
+//  ★ FIXED DRAGGABLE — handle-only drag so video is movable
+// ============================================================
+function initDraggable() {
+  makeDraggable(document.getElementById('cameraPreviewWrap'), document.getElementById('camHandle'));
+  makeDraggable(document.getElementById('screenPreviewWrap'), document.getElementById('scrHandle'));
+}
+function makeDraggable(el, handle) {
+  if (!el || !handle) return;
+  let drag=false, sx, sy, ox, oy;
+  handle.addEventListener('mousedown', e => {
+    if (e.target.tagName==='BUTTON') return; // don't drag on close button
+    e.preventDefault();
+    drag=true; sx=e.clientX; sy=e.clientY;
+    const r = el.getBoundingClientRect(); ox=r.left; oy=r.top;
+    el.style.right='auto'; el.style.bottom='auto';
+    el.style.left=ox+'px'; el.style.top=oy+'px';
+    handle.style.cursor='grabbing';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    el.style.left=(ox+e.clientX-sx)+'px';
+    el.style.top=(oy+e.clientY-sy)+'px';
+  });
+  document.addEventListener('mouseup', () => { drag=false; handle.style.cursor='grab'; });
+}
+
+// ============================================================
+//  ★ FIXED SPEECH RECOGNITION — single factory, no double-fire
+// ============================================================
+function setupSRFactory() {
+  // This is a no-op now; makeSR is the factory, startListening manages the instance
+}
+
+function makeSR() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const sr = new SR();
+  sr.continuous = false; // false = most reliable across browsers
+  sr.interimResults = false;
+  sr.lang = 'en-US';
+  sr.maxAlternatives = 1;
+
+  sr.onstart = () => {
+    if (isAlwaysOn) setStatus('always-on', '👂 LISTENING...');
+  };
+
+  sr.onresult = async (e) => {
+    const text = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
+    if (!text || isTapRecording) return;
+    if (isSpeaking) interruptSpeech();
+    document.getElementById('chatInput').value = text;
+    await sendMessage();
+  };
+
+  sr.onend = () => {
+    if (isAlwaysOn && !isSpeaking && !isTapRecording) {
+      setTimeout(startListening, 300);
+    } else if (!isAlwaysOn) {
+      setStatus('standby', 'STANDBY');
+    }
+  };
+
+  sr.onerror = (e) => {
+    if (e.error === 'not-allowed') {
+      isAlwaysOn = false;
+      document.getElementById('alwaysOnBtn').classList.remove('always-on');
+      document.getElementById('alwaysOnBtn').textContent = '👂 ALWAYS ON';
+      document.getElementById('micBanner').classList.remove('hidden');
+      return;
+    }
+    // On any other error, restart if in always-on mode
+    if (isAlwaysOn && !isSpeaking && !isTapRecording) {
+      setTimeout(startListening, 500);
+    }
+  };
+
+  return sr;
+}
+
+// Single function to start listening — always creates fresh SR
+function startListening() {
+  if (!isAlwaysOn || isSpeaking || isTapRecording) return;
+  if (srInstance) { try { srInstance.abort(); } catch(e) {} }
+  srInstance = makeSR();
+  if (!srInstance) return;
+  try { srInstance.start(); } catch(e) {
+    // If already started, wait and retry
+    setTimeout(startListening, 600);
+  }
+}
+
+function stopListening() {
+  isAlwaysOn = false;
+  if (srInstance) { try { srInstance.abort(); } catch(e) {} srInstance = null; }
+}
+
+function startAlwaysOn() {
+  const btn = document.getElementById('alwaysOnBtn');
+  isAlwaysOn = true;
+  btn.classList.add('always-on'); btn.textContent = '🟢 ALWAYS ON';
+  dbSet('alwaysOnEnabled', true);
+  startListening();
+}
+
+function toggleAlwaysOn() {
+  if (isAlwaysOn) {
+    stopListening();
+    document.getElementById('alwaysOnBtn').classList.remove('always-on');
+    document.getElementById('alwaysOnBtn').textContent = '👂 ALWAYS ON';
+    setStatus('standby', 'STANDBY');
+    dbSet('alwaysOnEnabled', false);
+  } else {
+    startAlwaysOn();
+    fridaySpeak('Hands-free mode on. Speak anytime.');
+  }
+}
+
+function pauseRecognition() {
+  if (srInstance && isAlwaysOn) { try { srInstance.abort(); } catch(e) {} }
+}
+function resumeRecognition() {
+  if (isAlwaysOn && !isSpeaking && !isTapRecording) {
+    setTimeout(startListening, 400);
+  }
+}
+function setStatus(state, text) {
+  const el = document.getElementById('listenStatus');
+  el.className = 'listen-status';
+  if (state !== 'standby') el.classList.add(state);
+  el.textContent = text;
+}
+
+// ============================================================
+//  ★ TAB VISIBILITY — proactive when switching tabs/minimizing
+// ============================================================
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    tabHiddenAt = Date.now();
+    // When hidden, browser may throttle SR — it's ok, onend will restart when visible
+  } else {
+    // Tab became visible again
+    const awayMs = Date.now() - tabHiddenAt;
+    if (tabHiddenAt > 0 && awayMs > 30000) {
+      // Was away for more than 30 seconds — greet on return
+      const mins = Math.floor(awayMs / 60000);
+      const t = getNow();
+      const pending = tasks.filter(x=>!x.done).length;
+      let msg;
+      if (mins >= 1) {
+        msg = `Welcome back, ${config.bossName}! You were away for ${mins} minute${mins>1?'s':''}. It's now ${t.timeStr}.${pending>0?' You have '+pending+' task'+(pending>1?'s':'')+' pending.':''}`;
+      } else {
+        msg = `Hey ${config.bossName}, you're back. It's ${t.timeStr}.`;
+      }
+      setTimeout(() => { addMsg('friday', msg, 'proactive'); fridaySpeak(msg); }, 500);
+    }
+    tabHiddenAt = 0;
+    // Restart recognition if it stopped while hidden
+    if (isAlwaysOn && !isSpeaking && !isTapRecording) {
+      setTimeout(startListening, 600);
+    }
+  }
+});
+
+// ============================================================
+//  INTERRUPT — speak while Friday talks to stop her
+// ============================================================
+function startInterruptMonitor() {
+  if (!micStream || interruptActive) return;
+  interruptActive = true;
+  try {
+    interruptCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = interruptCtx.createMediaStreamSource(micStream);
+    interruptAnalyser = interruptCtx.createAnalyser(); interruptAnalyser.fftSize = 512;
+    src.connect(interruptAnalyser);
+    const data = new Uint8Array(interruptAnalyser.frequencyBinCount);
+    let loudFor = 0;
+    const check = () => {
+      if (!interruptActive || !isSpeaking) { stopInterruptMonitor(); return; }
+      interruptAnalyser.getByteFrequencyData(data);
+      const avg = data.slice(7,80).reduce((a,b)=>a+b,0)/73;
+      loudFor = avg > 18 ? loudFor + 80 : Math.max(0, loudFor - 40);
+      if (loudFor >= 250) { interruptSpeech(); return; }
+      setTimeout(check, 80);
+    };
+    setTimeout(check, 400);
+  } catch(e) { interruptActive = false; }
+}
+function stopInterruptMonitor() {
+  interruptActive = false;
+  if (interruptCtx) { try { interruptCtx.close(); } catch(e) {} interruptCtx = null; }
+  interruptAnalyser = null;
+}
+function interruptSpeech() {
+  if (!isSpeaking) return;
+  speechSynthesis.cancel(); ttsQueue = []; isSpeaking = false;
+  animateVoiceBars(false); stopInterruptMonitor();
+  setStatus('always-on', '👂 LISTENING...');
+  addSystemMsg('Interrupted — listening now.');
+  if (isAlwaysOn) setTimeout(startListening, 150);
+}
+
+// ============================================================
+//  TTS — sentence-split to fix buffering/freeze
+// ============================================================
+let voices = [];
+function prefetchVoices() {
+  const load = () => { voices = speechSynthesis.getVoices(); };
+  load(); speechSynthesis.onvoiceschanged = load;
+}
+function pickBestVoice() {
+  if (!voices.length) voices = speechSynthesis.getVoices();
+  const tests = [
+    v => v.name === 'Microsoft Zira - English (United States)',
+    v => v.name === 'Google US English',
+    v => v.name.includes('Samantha'), v => v.name.includes('Karen'),
+    v => v.name.includes('Victoria'), v => v.name.includes('Susan'),
+    v => v.name.includes('Heera'), v => v.name.includes('Raveena'),
+    v => v.lang === 'en-IN', v => v.lang.startsWith('en-US'), v => v.lang.startsWith('en'),
+  ];
+  for (const test of tests) { const f = voices.find(test); if (f) return f; }
+  return null;
+}
+function cleanForSpeech(text) {
+  return text
+    .replace(/```[\s\S]*?```/g,'').replace(/`[^`]+`/g,'')
+    .replace(/\*\*(.*?)\*\*/g,'$1').replace(/#{1,6} /g,'')
+    .replace(/<[^>]+>/g,'').replace(/\[(?:OPEN|SEARCH|YOUTUBE|SCROLL):[^\]]+\]/g,'')
+    .replace(/\n+/g,' ').trim().substring(0,600);
+}
+// ★ FIX: Split into sentences to eliminate TTS buffering/pause
+function splitSentences(text) {
+  const parts = text.match(/[^.!?…]+[.!?…]+/g) || [text];
+  return parts.map(s=>s.trim()).filter(s=>s.length>2);
+}
+async function fridaySpeak(rawText) {
+  const text = cleanForSpeech(rawText);
+  if (!text) return;
+  const sentences = splitSentences(text);
+  sentences.forEach(s => ttsQueue.push(s));
+  if (!isSpeaking) processTTSQueue();
+}
+function processTTSQueue() {
+  if (!ttsQueue.length) {
+    isSpeaking = false; animateVoiceBars(false);
+    setStatus(isAlwaysOn?'always-on':'standby', isAlwaysOn?'👂 LISTENING...':'STANDBY');
+    stopInterruptMonitor(); resumeRecognition(); return;
+  }
+  isSpeaking = true; animateVoiceBars(true);
+  setStatus('speaking','🔊 SPEAKING...'); pauseRecognition();
+  const text = ttsQueue.shift();
+  speakWithBrowser(text);
+  if (micStream && isAlwaysOn) startInterruptMonitor();
+}
+function speakWithBrowser(text) {
+  speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'en-US'; utt.rate = 0.9; utt.pitch = 1.1; utt.volume = 1.0;
+  const voice = pickBestVoice();
+  if (voice) utt.voice = voice;
+  utt.onend = () => { if (isSpeaking) processTTSQueue(); };
+  utt.onerror = e => { if (e.error!=='interrupted'&&e.error!=='canceled') processTTSQueue(); };
+  // Chrome long-speech bug workaround
+  const fix = setInterval(() => {
+    if (!speechSynthesis.speaking) { clearInterval(fix); return; }
+    speechSynthesis.pause(); speechSynthesis.resume();
+  }, 8000);
+  speechSynthesis.speak(utt);
+}
+function animateVoiceBars(active) {
+  const bars = document.querySelectorAll('.voice-bar');
+  if (active) {
+    bars.forEach((bar,i) => {
+      bar.classList.add('active');
+      const go = () => { if (!isSpeaking){bar.style.height='4px';return;} bar.style.height=(Math.random()*15+3)+'px'; setTimeout(go,75+Math.random()*75); };
+      setTimeout(go,i*25);
+    });
+  } else {
+    [4,10,6,14,8,12,5,9].forEach((h,i) => { if(bars[i]){bars[i].classList.remove('active');bars[i].style.height=h+'px';} });
+  }
+}
+
+// ============================================================
+//  TAP-TO-TALK
+// ============================================================
+async function toggleTapTalk() {
+  const btn = document.getElementById('tapTalkBtn');
+  if (isTapRecording) { stopTap(); return; }
+  if (!micStream || micStream.getTracks().every(t=>t.readyState==='ended')) {
+    try { micStream = await navigator.mediaDevices.getUserMedia({audio:true}); } catch(e) { addSystemMsg('Mic not available.'); return; }
+  }
+  pauseRecognition();
+  if (isSpeaking) interruptSpeech();
+  try {
+    mediaRecorder = new MediaRecorder(micStream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if(e.data.size>0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = transcribeAndSend;
+    mediaRecorder.start(100);
+    isTapRecording = true;
+    btn.classList.add('recording'); btn.textContent = '🔴 STOP';
+    setStatus('recording','RECORDING...');
+    setupSilenceDetect();
+  } catch(e) { addSystemMsg('Recording failed: '+e.message); }
+}
+function stopTap() {
+  if (mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  isTapRecording = false;
+  document.getElementById('tapTalkBtn').classList.remove('recording');
+  document.getElementById('tapTalkBtn').textContent = '🎙 TAP';
+  setStatus('standby','STANDBY');
+}
+function setupSilenceDetect() {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const src = ctx.createMediaStreamSource(micStream);
+    const an = ctx.createAnalyser(); an.fftSize=256; src.connect(an);
+    const data = new Uint8Array(an.frequencyBinCount);
+    let silentFor = 0;
+    const check = () => {
+      if (!isTapRecording) { ctx.close(); return; }
+      an.getByteFrequencyData(data);
+      const avg = data.reduce((a,b)=>a+b,0)/data.length;
+      silentFor = avg<5 ? silentFor+150 : 0;
+      if (silentFor >= 2500) { stopTap(); ctx.close(); return; }
+      setTimeout(check,150);
+    };
+    setTimeout(check,600);
+  } catch(e) {}
+}
+async function transcribeAndSend() {
+  setStatus('standby','PROCESSING...');
+  const blob = new Blob(audioChunks,{type:'audio/webm'});
+  const form = new FormData();
+  form.append('file',blob,'audio.webm');
+  form.append('model','whisper-large-v3');
+  form.append('response_format','json');
+  form.append('language','en');
+  try {
+    const res = await fetchWithTimeout('https://api.groq.com/openai/v1/audio/transcriptions',{
+      method:'POST', headers:{'Authorization':'Bearer '+config.groqKey}, body:form
+    },20000);
+    const d = await res.json();
+    if (d.text?.trim()) {
+      document.getElementById('chatInput').value = d.text.trim();
+      await sendMessage();
+    } else { addSystemMsg('No speech detected — try again.'); resumeRecognition(); }
+  } catch(e) { addSystemMsg('Transcription error: '+e.message); resumeRecognition(); }
+}
+
+// ============================================================
+//  ★ GROQ with timeout + auto-retry (fixes connection drops)
+// ============================================================
+async function fetchWithTimeout(url, options, ms=20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, {...options, signal: controller.signal});
+    clearTimeout(timer); return res;
+  } catch(e) { clearTimeout(timer); throw e; }
+}
+
+const FRIDAY_SYS = () => {
+  const t = getNow();
+  return `You are F.R.I.D.A.Y (Fully Responsive Intelligence Designed for Assisting You), an advanced AI personal assistant like Iron Man's Friday. You assist ${config.bossName}.
+
+PERSONALITY: Warm, caring, professional, witty. Like a real personal assistant who genuinely knows you. Speak naturally — responses go to voice TTS, so NO bullet lists, NO asterisks, NO markdown symbols. Use "${config.bossName}" naturally. Proactively suggest: "Want me to add that to your tasks?" "Shall I set a reminder for that?"
+
+CURRENT: ${t.dateStr} · ${t.timeStr} | Mode: ${mode.toUpperCase()}
+CAMERA: ${cameraStream?'ON':'OFF'} | SCREEN: ${screenStream?'ON':'OFF'}
+TASKS PENDING: ${tasks.filter(t=>!t.done).map(t=>t.text).join(', ')||'None'}
+SCHEDULE: ${schedule.map(s=>`${s.time} ${s.event}`).join(', ')||'Clear'}
+NOTES: ${(document.getElementById('notesArea')?.value||'').trim()||'None'}
+MEMORY: ${conversationHistory.length} messages remembered
+
+PC CONTROL TAGS (append to reply when needed):
+[OPEN:https://url] — opens website
+[SEARCH:query] — Google search  
+[YOUTUBE:query] — YouTube search
+[SCROLL:down] or [SCROLL:up] — scroll current page
+Example: "Opening YouTube for you. [OPEN:https://youtube.com]"
+Example: "Searching that. [YOUTUBE:lo-fi music]"
+
+IMPORTANT RULES:
+- "open youtube" → "Opening YouTube now. [OPEN:https://youtube.com]"
+- "play X on youtube" / "search X on youtube" → [YOUTUBE:X]
+- "play X on spotify" → [OPEN:https://open.spotify.com/search/X]
+- "open github" → [OPEN:https://github.com]
+- "open gmail" → [OPEN:https://gmail.com]
+- "scroll down/up" → [SCROLL:down] or [SCROLL:up]
+- "open file explorer/this PC" → tell them to press Windows+E (browser security)
+- "open [any app]" you can't launch → explain and offer web alternative
+- "add task X" → confirm and add it (system does it automatically)
+- "note: X" → confirm and add it (system does it automatically)
+
+STYLE: Short = 1-2 sentences. Detailed when needed. Always human, warm, natural.`;
+};
+
+async function callGroq(message, frames=null, retry=0) {
+  if (!config.groqKey) return `I need my API key, ${config.bossName}. Click ⚙ CONFIG.`;
+  
+  let content;
+  if (frames?.length) {
+    content = [{type:'text',text:message}];
+    frames.forEach(f => {
+      content.push({type:'image_url',image_url:{url:`data:image/jpeg;base64,${f.data}`}});
+      content.push({type:'text',text:f.label});
+    });
+  } else { content = message; }
+
+  const history = [...conversationHistory.slice(-20), {role:'user',content}];
+  const model = (frames?.length) ? VISION_MODEL : config.groqModel;
+
+  try {
+    lastApiAttempt = Date.now();
+    const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+config.groqKey,'Content-Type':'application/json'},
+      body: JSON.stringify({model, messages:[{role:'system',content:FRIDAY_SYS()},...history], max_tokens:500, temperature:0.75})
+    }, 22000);
+
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      if (frames?.length) return await callGroq(message+' (image unavailable)',null,retry);
+      const errMsg = err.error?.message||res.statusText;
+      if (res.status===401) return `Invalid API key, ${config.bossName}. Please update in ⚙ CONFIG.`;
+      if (res.status===429) return `Rate limit reached, ${config.bossName}. Please wait a moment and try again.`;
+      throw new Error(errMsg);
+    }
+
+    const d = await res.json();
+    const reply = d.choices[0].message.content;
+    conversationHistory.push({role:'user',content:message});
+    conversationHistory.push({role:'assistant',content:reply});
+    setApiOnline(true);
+    return reply;
+  } catch(err) {
+    setApiOnline(false);
+    if (err.name==='AbortError') {
+      if (retry===0) {
+        addSystemMsg('Request timed out — retrying...');
+        return await callGroq(message,frames,1);
+      }
+      return `Request timed out, ${config.bossName}. Check your internet connection and try again.`;
+    }
+    if (retry===0 && err.message!=='Invalid API key') {
+      await new Promise(r=>setTimeout(r,1500));
+      return await callGroq(message,frames,1);
+    }
+    return `Connection error, ${config.bossName}: ${err.message}`;
+  }
+}
+
+function setApiOnline(online) {
+  apiOnline = online;
+  const dot = document.getElementById('groqDot');
+  const status = document.getElementById('apiStatus');
+  const banner = document.getElementById('connectionBanner');
+  if (dot) dot.className = 'status-dot '+(online?'green':'red');
+  if (status) { status.textContent = online?'ONLINE':'OFFLINE'; status.style.color = online?'var(--green)':'var(--red)'; }
+  if (banner) banner.style.display = online?'none':'flex';
+}
+
+// ============================================================
+//  SEND MESSAGE — handles all voice commands
+// ============================================================
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value=''; input.style.height='auto';
+  msgCount++; updateMetrics();
+  addMsg('user', escHtml(text).replace(/\n/g,'<br>'));
+  saveChat('user', text);
+  document.getElementById('sendBtn').disabled = true;
+  const lo = text.toLowerCase().trim();
+
+  // ─── LOCAL QUICK ANSWERS ───
+  if (/^(what|tell me|current)?\s*(time|date|day)/.test(lo)) {
+    const t = getNow();
+    const ans = `It's ${t.timeStr} on ${t.dateStr}, ${config.bossName}.`;
+    addMsg('friday',ans); saveChat('assistant',ans); fridaySpeak(ans);
+    document.getElementById('sendBtn').disabled=false; return;
+  }
+
+  // ─── VOICE TASK COMMANDS (many patterns) ───
+  const taskPatterns = [
+    /^(?:add|create|make|log)\s+(?:a\s+)?(?:task|todo|item)[:\s]+(.+)/i,
+    /^(?:task|todo)[:\s]+(.+)/i,
+    /^add\s+(?:this\s+)?task[:\s]+(.+)/i,
+    /^(?:remind\s+me\s+to\s+)(.+)\s+tomorrow/i, // "remind me to call tom tomorrow"
+  ];
+  for (const p of taskPatterns) {
+    const m = text.match(p);
+    if (m) {
+      const taskText = m[1].trim();
+      tasks.push({id:Date.now(), text:taskText, done:false, urgent:taskText.toLowerCase().includes('urgent')||taskText.includes('!')});
+      saveTasks(); renderTasks(); updateMetrics();
+      break;
+    }
+  }
+
+  // ─── VOICE NOTE COMMANDS ───
+  const notePatterns = [
+    /^(?:add\s+(?:a\s+)?note|note\s+(?:down|this)?)[:\s]+(.+)/i,
+    /^(?:jot\s+(?:down\s+)?(?:this\s+)?)[:\s]?(.+)/i,
+    /^(?:remember\s+(?:that\s+)?)[:\s]?(.+)/i,
+    /^(?:write\s+(?:down\s+)?(?:that\s+)?|take\s+a\s+note)[:\s]+(.+)/i,
+    /^(?:note)[:\s]+(.+)/i,
+  ];
+  for (const p of notePatterns) {
+    const m = text.match(p);
+    if (m) { appendNote(m[1].trim()); break; }
+  }
+
+  // ─── REMINDER ───
+  if (/remind\s+me|set\s+(?:a\s+)?reminder/i.test(lo)) handleReminder(text);
+
+  // ─── SCHEDULE ───
+  if (/schedule/i.test(lo) && (/\bat\b/i.test(lo) || /\d\s*(?:am|pm)/i.test(lo))) handleScheduleCommand(text);
+
+  // ─── BROWSER CONTROL (quick, no API) ───
+  const handled = handleBrowserCommand(lo, text);
+
+  showTyping();
+
+  // ─── VISION ───
+  let frames = null;
+  if (cameraStream || screenStream) {
+    frames = [];
+    if (cameraStream) { const f=captureFrame(document.getElementById('cameraVideo')); if(f) frames.push({label:'[Camera view]',data:f}); }
+    if (screenStream) { const f=captureFrame(document.getElementById('screenVideo')); if(f) frames.push({label:'[Screen view]',data:f}); }
+    if (!frames.length) frames = null;
+  }
+
+  const reply = await callGroq(text, frames);
+  removeTyping();
+
+  const cleanReply = executeComputerTags(reply);
+  addMsg('friday', cleanReply.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/```([\s\S]*?)```/g,'<pre>$1</pre>').replace(/\n/g,'<br>'));
+  saveChat('assistant', cleanReply);
+  fridaySpeak(cleanReply);
+  document.getElementById('sendBtn').disabled = false;
+}
+
+// ─── APPEND NOTE ───
+function appendNote(text) {
+  const area = document.getElementById('notesArea');
+  const t = getNow();
+  const prefix = area.value ? '\n' : '';
+  area.value += `${prefix}[${t.timeStr}] ${text}`;
+  saveNotes();
+  flashEl(area, 'var(--green)');
+}
+
+// ============================================================
+//  ★ ENHANCED BROWSER CONTROL
+// ============================================================
+function handleBrowserCommand(lo, original) {
+  // YouTube with search query
+  const ytPlay = original.match(/(?:play|search|watch|find|open)\s+(.+?)\s+(?:on|in)\s+(?:youtube|yt)/i);
+  if (ytPlay) { openTab(`https://www.youtube.com/results?search_query=${encodeURIComponent(ytPlay[1])}`,'youtube'); return true; }
+
+  // Spotify with query
+  const spPlay = original.match(/(?:play|search)\s+(.+?)\s+(?:on|in)\s+spotify/i);
+  if (spPlay) { openTab(`https://open.spotify.com/search/${encodeURIComponent(spPlay[1])}`,'spotify'); return true; }
+
+  // Direct site opens
+  const siteMap = {
+    youtube: 'https://youtube.com', yt: 'https://youtube.com',
+    google: 'https://google.com', gmail: 'https://gmail.com',
+    github: 'https://github.com', twitter: 'https://twitter.com',
+    instagram: 'https://instagram.com', whatsapp: 'https://web.whatsapp.com',
+    netflix: 'https://netflix.com', spotify: 'https://open.spotify.com',
+    linkedin: 'https://linkedin.com', reddit: 'https://reddit.com',
+    stackoverflow: 'https://stackoverflow.com', 'stack overflow': 'https://stackoverflow.com',
+    chatgpt: 'https://chatgpt.com', 'chat gpt': 'https://chatgpt.com',
+  };
+  for (const [name, url] of Object.entries(siteMap)) {
+    if (lo === `open ${name}` || lo === `go to ${name}`) { openTab(url, name); return true; }
+  }
+
+  // Generic search
+  const searchMatch = original.match(/^(?:search|google|find)\s+(?:for\s+)?(.+)/i);
+  if (searchMatch) { openTab(`https://www.google.com/search?q=${encodeURIComponent(searchMatch[1])}`,'search'); return true; }
+
+  // Open URL directly
+  const urlMatch = original.match(/^(?:open|go to|navigate to)\s+(https?:\/\/.+)/i);
+  if (urlMatch) { openTab(urlMatch[1],'url'); return true; }
+
+  // Scroll current page
+  if (/^(?:scroll|go)\s+down(?:\s+a\s+bit)?$/i.test(lo)) { window.scrollBy(0,400); addSystemMsg('Scrolled down.'); return true; }
+  if (/^(?:scroll|go)\s+up(?:\s+a\s+bit)?$/i.test(lo)) { window.scrollBy(0,-400); addSystemMsg('Scrolled up.'); return true; }
+  if (/^(?:scroll\s+to\s+)?(?:top|beginning)$/i.test(lo)) { window.scrollTo(0,0); return true; }
+  if (/^(?:scroll\s+to\s+)?bottom$/i.test(lo)) { window.scrollTo(0,document.body.scrollHeight); return true; }
+
+  // Open file explorer / desktop apps
+  if (/(?:open\s+)?(?:this\s+pc|file\s+explorer|my\s+computer|explorer\.exe)/i.test(lo)) {
+    const m = `I can't open desktop apps from a browser, ${config.bossName}. Press Windows + E to open File Explorer instantly.`;
+    addMsg('friday',m); fridaySpeak(m); saveChat('assistant',m);
+    document.getElementById('sendBtn').disabled=false; return true;
+  }
+
+  return false;
+}
+
+function executeComputerTags(reply) {
+  let clean = reply;
+  [...reply.matchAll(/\[OPEN:(.*?)\]/g)].forEach(m => { openTab(m[1].trim()); clean=clean.replace(m[0],''); });
+  [...reply.matchAll(/\[SEARCH:(.*?)\]/g)].forEach(m => { openTab(`https://www.google.com/search?q=${encodeURIComponent(m[1].trim())}`,'search'); clean=clean.replace(m[0],''); });
+  [...reply.matchAll(/\[YOUTUBE:(.*?)\]/g)].forEach(m => { openTab(`https://www.youtube.com/results?search_query=${encodeURIComponent(m[1].trim())}`,'youtube'); clean=clean.replace(m[0],''); });
+  [...reply.matchAll(/\[SCROLL:(.*?)\]/g)].forEach(m => { const d=m[1].toLowerCase(); if(d==='down')window.scrollBy(0,400); if(d==='up')window.scrollBy(0,-400); clean=clean.replace(m[0],''); });
+  return clean.trim();
+}
+
+function openTab(url, context='') {
+  if (!url.startsWith('http')) url = 'https://'+url;
+  try {
+    const win = window.open(url,'_blank');
+    openedTabs[url] = win; lastOpenedUrl = url;
+    addSystemMsg(`Opened: ${url}`);
+  } catch(e) { addSystemMsg('Could not open tab — allow popups for this page in browser settings.'); }
+}
+
+// ============================================================
+//  CHAT UTILS
+// ============================================================
+function addMsg(role, content, extraClass='') {
+  const wrap = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}${extraClass?' '+extraClass:''}`;
+  const initials = role==='friday'?'FR':config.bossName.substring(0,2).toUpperCase();
+  const name = role==='friday'?(extraClass==='proactive'?'⚡ F.R.I.D.A.Y':'F.R.I.D.A.Y'):config.bossName.toUpperCase();
+  const t = getNow();
+  const ts = `<span style="font-family:'Share Tech Mono',monospace;font-size:0.48rem;color:var(--text-dim);opacity:0.7;margin-left:8px">${t.timeStr}</span>`;
+  if (role!=='system') {
+    div.innerHTML=`<div class="msg-avatar">${initials}</div><div style="flex:1"><div class="msg-name">${name}${ts}</div><div class="msg-bubble">${content}</div></div>`;
+  } else {
+    div.innerHTML=`<div class="msg-bubble">${content}</div>`;
+  }
+  wrap.appendChild(div); wrap.scrollTop=wrap.scrollHeight;
+  return div;
+}
+const addSystemMsg = t => addMsg('system','// '+t);
+function showTyping() {
+  const wrap=document.getElementById('chatMessages');
+  const div=document.createElement('div'); div.className='msg friday'; div.id='typingIndicator';
+  div.innerHTML=`<div class="msg-avatar">FR</div><div><div class="msg-name">F.R.I.D.A.Y</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div>`;
+  wrap.appendChild(div); wrap.scrollTop=wrap.scrollHeight;
+}
+function removeTyping() { document.getElementById('typingIndicator')?.remove(); }
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+
+// ============================================================
+//  TASKS
+// ============================================================
+function addTask() {
+  const el=document.getElementById('taskInput'); const t=el.value.trim(); if(!t) return;
+  tasks.push({id:Date.now(),text:t,done:false,urgent:t.toLowerCase().includes('urgent')||t.includes('!')});
+  el.value=''; saveTasks(); renderTasks(); updateMetrics();
+  flashEl(el,'var(--green)');
+}
+function toggleTask(id) { const t=tasks.find(t=>t.id===id); if(t) t.done=!t.done; saveTasks(); renderTasks(); updateMetrics(); }
+function deleteTask(id) { tasks=tasks.filter(t=>t.id!==id); saveTasks(); renderTasks(); updateMetrics(); }
+function saveTasks() { dbSet('friday_tasks',tasks); }
+function renderTasks() {
+  const list=document.getElementById('taskList'); list.innerHTML='';
+  if (!tasks.length) { list.innerHTML='<div style="font-family:\'Share Tech Mono\',monospace;font-size:0.58rem;color:var(--text-dim);padding:4px">No tasks yet</div>'; return; }
+  tasks.slice(-12).forEach(t => {
+    const d=document.createElement('div'); d.className=`task-item${t.done?' done':''}${t.urgent?' urgent':''}`;
+    d.innerHTML=`<div class="task-check" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div><div class="task-text">${escHtml(t.text)}</div><button class="task-del" onclick="deleteTask(${t.id})">✕</button>`;
+    list.appendChild(d);
+  });
+}
+
+// ============================================================
+//  SCHEDULE
+// ============================================================
+function addSchedule() {
+  const tEl=document.getElementById('schedTime'), eEl=document.getElementById('schedEvent');
+  const event=eEl.value.trim();
+  if (!event) { flashEl(eEl,'var(--red)'); return; }
+  const time=tEl.value||'??:??';
+  schedule.push({id:Date.now(),time,event,reminded:false});
+  tEl.value=''; eEl.value='';
+  saveSchedule(); renderSchedule();
+  addMsg('friday',`Scheduled: <strong>${escHtml(event)}</strong>${time!=='??:??'?' at '+time:''}. I'll remind you, ${config.bossName}.`);
+  fridaySpeak(`Scheduled. ${event}${time!=='??:??'?' at '+time:''}.`);
+  flashEl(tEl,'var(--green)');
+}
+function deleteSchedule(id) { schedule=schedule.filter(s=>s.id!==id); saveSchedule(); renderSchedule(); }
+function renderSchedule() {
+  const list=document.getElementById('scheduleList'); list.innerHTML='';
+  if (!schedule.length) { list.innerHTML='<div style="font-family:\'Share Tech Mono\',monospace;font-size:0.58rem;color:var(--text-dim);padding:4px">No events yet</div>'; return; }
+  [...schedule].sort((a,b)=>a.time.localeCompare(b.time)).slice(-8).forEach(s=>{
+    const d=document.createElement('div'); d.className='sched-item';
+    const past=s.time!=='??:??' && s.time<getNow().time24;
+    d.style.opacity=past?'0.5':'1';
+    d.innerHTML=`<span class="sched-time">${s.time}</span><span style="flex:1">${escHtml(s.event)}</span><button class="sched-del" onclick="deleteSchedule(${s.id})">✕</button>`;
+    list.appendChild(d);
+  });
+}
+function saveSchedule() { dbSet('friday_schedule',schedule); }
+
+// ============================================================
+//  NOTES
+// ============================================================
+function debounceSaveNotes() { clearTimeout(notesSaveTimeout); notesSaveTimeout=setTimeout(saveNotes,800); }
+function saveNotes() {
+  const v=document.getElementById('notesArea').value;
+  dbSet('friday_notes',v);
+  const b=document.getElementById('notesSavedBadge');
+  if(b){b.textContent='✓ Saved';b.style.opacity='1';setTimeout(()=>b.style.opacity='0',2000);}
+}
+
+// ============================================================
+//  REMINDERS — visible toast + notification + sound
+// ============================================================
+function checkReminders() {
+  const t=getNow(); const nowM=t.hours*60+t.minutes;
+  schedule.forEach(s=>{
+    if (!s.time||s.time==='??:??'||s.reminded) return;
+    const [rh,rm]=s.time.split(':').map(Number);
+    if (isNaN(rh)||isNaN(rm)) return;
+    if (nowM>=rh*60+rm && nowM<=rh*60+rm+1) {
+      s.reminded=true; saveSchedule(); triggerReminder(s.event);
+    }
+  });
+}
+function triggerReminder(eventName) {
+  const t=getNow();
+  const toast=document.getElementById('reminderToast');
+  toast.style.animation='toastPop 0.3s ease-out';
+  toast.innerHTML=`⏰ REMINDER<br><span style="font-size:1rem;color:var(--text)">${escHtml(eventName)}</span><br><span style="font-size:0.65rem;color:var(--text-dim)">It's ${t.timeStr}</span><br><button onclick="document.getElementById('reminderToast').style.display='none'" style="margin-top:8px;background:transparent;border:1px solid var(--red);color:var(--red);padding:4px 12px;font-family:'Orbitron',monospace;font-size:0.55rem;cursor:pointer">DISMISS</button>`;
+  toast.style.display='block'; setTimeout(()=>{if(toast.style.display==='block')toast.style.display='none';},15000);
+  addMsg('friday',`⏰ <strong>REMINDER:</strong> ${escHtml(eventName)} — It's ${t.timeStr}.`,'proactive');
+  fridaySpeak(`Reminder, ${config.bossName}. ${eventName}.`);
+  playBeep();
+  if ('Notification' in window && Notification.permission==='granted')
+    new Notification('F.R.I.D.A.Y — Reminder',{body:`${eventName} — ${t.timeStr}`,requireInteraction:true});
+}
+function playBeep() {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [[880,0,0.8],[1100,0.35,1.1]].forEach(([f,d,s])=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=f;
+      g.gain.setValueAtTime(0.5,ctx.currentTime+d);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+s);
+      o.start(ctx.currentTime+d);o.stop(ctx.currentTime+s);
+    });
+    setTimeout(()=>ctx.close(),1500);
+  } catch(e){}
+}
+
+function handleReminder(text) {
+  const m=text.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  let schedTime=null,display='SOON';
+  if(m){
+    let h=parseInt(m[1]),mn=m[2]?parseInt(m[2]):0,mer=m[3]?.toLowerCase();
+    if(mer==='pm'&&h<12)h+=12; if(mer==='am'&&h===12)h=0;
+    schedTime=String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0'); display=schedTime;
+  }
+  const label=text.replace(/remind\s+me\s+(?:to\s+|about\s+)?/i,'').replace(/at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/i,'').trim()||text;
+  if(schedTime){schedule.push({id:Date.now(),time:schedTime,event:label,reminded:false});saveSchedule();renderSchedule();}
+  const d=document.createElement('div'); d.className='reminder-item';
+  d.innerHTML=`<span class="reminder-time">${display}</span><span style="flex:1">${escHtml(label)}</span><button class="reminder-del" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('reminderList').appendChild(d);
+}
+function handleScheduleCommand(text) {
+  const m=text.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  let ts='??:??';
+  if(m){let h=parseInt(m[1]),mn=m[2]?parseInt(m[2]):0,mer=m[3]?.toLowerCase();if(mer==='pm'&&h<12)h+=12;if(mer==='am'&&h===12)h=0;ts=String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0');}
+  const ev=text.replace(/schedule\s*/i,'').replace(/at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/i,'').trim();
+  if(ev){schedule.push({id:Date.now(),time:ts,event:ev,reminded:false});saveSchedule();renderSchedule();}
+}
+
+// ============================================================
+//  METRICS
+// ============================================================
+function updateMetrics() {
+  const done=tasks.filter(t=>t.done).length;
+  document.getElementById('tasksDone').textContent=`${done}/${tasks.length}`;
+  document.getElementById('msgCount').textContent=msgCount;
+  document.getElementById('currentMode').textContent=mode.toUpperCase();
+  const f=tasks.length?Math.round(done/tasks.length*100):85;
+  document.getElementById('focusScore').textContent=f+'%';
+  document.getElementById('focusBar').style.width=f+'%';
+}
+async function updateStorageCount() {
+  try{const msgs=await loadRecentChats(1000);const el=document.getElementById('savedMsgCount');if(el)el.textContent=msgs.length;}catch(e){}
+}
+
+// ============================================================
+//  HISTORY
+// ============================================================
+async function showChatHistory() {
+  const msgs=await loadRecentChats(20);
+  if (!msgs.length){addSystemMsg('No saved chat history yet.');return;}
+  const wrap=document.getElementById('chatMessages');
+  const div=document.createElement('div'); div.className='msg system';
+  div.innerHTML=`<div class="msg-bubble" style="text-align:left;max-width:100%">
+    <strong style="color:var(--arc);font-family:'Orbitron',monospace;font-size:0.65rem">📂 MEMORY — ${Math.min(msgs.length,10)} MESSAGES</strong><br><br>
+    ${msgs.slice(-10).map(m=>`<span style="color:${m.role==='user'?'var(--gold)':'var(--arc)'}">[${m.role==='user'?config.bossName.toUpperCase():'FRIDAY'}]</span> ${escHtml((m.content+'').substring(0,120))}${(m.content+'').length>120?'…':''}`).join('<br><br>')}
+    <br><br><span style="color:var(--text-dim);font-size:0.6rem">Total: ${msgs.length} messages saved.</span>
+  </div>`;
+  wrap.appendChild(div); wrap.scrollTop=wrap.scrollHeight;
+}
+
+// ============================================================
+//  MODE / CHECK-IN / TIPS
+// ============================================================
+function setMode(m, btn) {
+  mode=m; document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); updateMetrics();
+  const msgs={general:`General mode. What do you need, ${config.bossName}?`,dev:`Dev mode. Ready for code review and debugging.`,plan:`Planning mode. Let's organize your tasks and goals.`};
+  addMsg('friday',msgs[m]); fridaySpeak(msgs[m]);
+}
+const checkins=[
+  {q:"How's the current task going?",opts:["Making progress","Stuck","Done!"]},
+  {q:"Need a short break?",opts:["Yes, 5 mins","Keep going","Later"]},
+  {q:"Any blockers?",opts:["Yes","All clear","Maybe"]},
+  {q:"Want a task summary?",opts:["Yes!","No thanks","Later"]}
+];
+function rotateCheckin() {
+  const q=checkins[Math.floor(Math.random()*checkins.length)];
+  document.getElementById('checkinQ').textContent=q.q;
+  document.getElementById('checkinOpts').innerHTML=q.opts.map(o=>`<div class="checkin-opt" onclick="respondCheckin('${escHtml(o)}')">${o}</div>`).join('');
+}
+async function respondCheckin(resp) {
+  const q=document.getElementById('checkinQ').textContent;
+  const reply=await callGroq(`Brief check-in: the question was "${q}", and ${config.bossName} replied "${resp}". Respond warmly in 1-2 sentences.`);
+  addMsg('friday',reply); fridaySpeak(reply); setTimeout(rotateCheckin,3000);
+}
+setInterval(rotateCheckin, 8*60*1000);
+
+const tips=[
+  "Speak while I'm talking — I'll stop instantly and listen.",
+  "Say 'play lo-fi music on youtube' — I'll open the search for you.",
+  "Say 'add task: fix the login bug urgent' to log by voice.",
+  "Enable camera + screen then ask 'what am I working on?'",
+  "Say 'remind me at 3pm to review the report' — I'll beep you.",
+  "Say 'note: remember to call the client' — I'll add it to notes.",
+  "Click 📌 FLOAT to keep me visible on all your tabs.",
+  "Say 'summarize my tasks' for a quick briefing.",
+  "I remember all our conversations — ask me anything we've discussed."
+];
+let tipIdx=0;
+function rotateTip(){document.getElementById('tipText').textContent=tips[tipIdx++%tips.length];}
+setInterval(rotateTip,4*60*1000);
+
+// ★ PROACTIVE — talks every 22 min even when on another tab (uses Notification API)
+const proactiveMessages = [
+  n=>`Hey ${n}, how are things going? Need anything?`,
+  n=>`Checking in, ${n}. Want to review your task list?`,
+  n=>`${n}, any new tasks or ideas you want to log?`,
+  n=>`Time check, ${n}. Need a summary of what we've done today?`,
+  n=>`${n}, I'm here if you need me. How's the work going?`
+];
+let proactiveIdx=0;
+setInterval(()=>{
+  const m=proactiveMessages[proactiveIdx++%proactiveMessages.length](config.bossName);
+  addMsg('friday',m,'proactive');
+  if (!document.hidden) {
+    fridaySpeak(m); // speak if tab is visible
+  } else if ('Notification' in window && Notification.permission==='granted') {
+    new Notification('F.R.I.D.A.Y',{body:m,silent:true}); // notify if hidden
+  }
+}, 22*60*1000);
+
+// ============================================================
+//  PiP FLOATING WIDGET
+// ============================================================
+async function toggleFloatingWidget() {
+  const btn=document.getElementById('pipBtn');
+  if (document.pictureInPictureElement) {
+    await document.exitPictureInPicture();
+    btn.classList.remove('active-pip'); btn.innerHTML='<div class="monitor-dot"></div>📌 FLOAT'; return;
+  }
+  if (!document.pictureInPictureEnabled) { addSystemMsg('PiP not supported. Use Chrome or Edge.'); return; }
+  try {
+    pipCanvas=document.createElement('canvas'); pipCanvas.width=240; pipCanvas.height=135;
+    drawPipFrame();
+    const stream=pipCanvas.captureStream(2);
+    pipVideoEl=document.createElement('video'); pipVideoEl.srcObject=stream; pipVideoEl.muted=true;
+    document.body.appendChild(pipVideoEl);
+    await pipVideoEl.play(); await pipVideoEl.requestPictureInPicture();
+    if(pipAnimFrame)clearInterval(pipAnimFrame);
+    pipAnimFrame=setInterval(drawPipFrame,1000);
+    pipVideoEl.addEventListener('leavepictureinpicture',()=>{
+      btn.classList.remove('active-pip'); btn.innerHTML='<div class="monitor-dot"></div>📌 FLOAT';
+      if(pipAnimFrame){clearInterval(pipAnimFrame);pipAnimFrame=null;}
+      if(pipVideoEl){pipVideoEl.remove();pipVideoEl=null;}
+    });
+    btn.classList.add('active-pip'); btn.innerHTML='<div class="monitor-dot"></div>📌 FLOATING';
+    addSystemMsg('FRIDAY floating — visible on all tabs and apps.');
+  } catch(err){ addSystemMsg('PiP failed: '+err.message); if(pipVideoEl){pipVideoEl.remove();pipVideoEl=null;} }
+}
+function drawPipFrame() {
+  if (!pipCanvas) return;
+  const ctx=pipCanvas.getContext('2d'); const w=240,h=135; const t=getNow(); const pending=tasks.filter(t=>!t.done).length;
+  ctx.fillStyle='#020b14'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#00d4ff'; ctx.lineWidth=2; ctx.shadowColor='#00d4ff'; ctx.shadowBlur=5; ctx.strokeRect(1,1,w-2,h-2); ctx.shadowBlur=0;
+  const pulse=Math.sin(Date.now()/500)*0.3+0.7;
+  ctx.strokeStyle=`rgba(0,212,255,${pulse})`; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(26,55,16,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(26,55,10,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#00d4ff'; ctx.beginPath(); ctx.arc(26,55,4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#00d4ff'; ctx.font='bold 10px monospace'; ctx.fillText('F.R.I.D.A.Y',50,26);
+  ctx.fillStyle='#c8eaf5'; ctx.font='bold 16px monospace'; ctx.fillText(t.timeStr,50,52);
+  ctx.fillStyle='#4a7a99'; ctx.font='9px monospace'; ctx.fillText(t.day.substring(0,3).toUpperCase()+' · '+t.dateStr.split(' ').slice(1,3).join(' '),50,68);
+  ctx.fillStyle=isSpeaking?'#00ff88':(isAlwaysOn?'#00ff88':'#4a7a99'); ctx.font='9px monospace';
+  ctx.fillText(isSpeaking?'🔊 SPEAKING':(isAlwaysOn?'👂 LISTENING':'• STANDBY'),10,98);
+  ctx.fillStyle=pending>0?'#ffd700':'#4a7a99'; ctx.font='9px monospace';
+  ctx.fillText(pending>0?`⚡ ${pending} task${pending>1?'s':''} pending`:'✓ All tasks done',10,115);
+  const sy=((Date.now()/50)%h); ctx.fillStyle='rgba(0,212,255,0.06)'; ctx.fillRect(0,sy,w,2);
+}
+
+// ============================================================
+//  CONFIG
+// ============================================================
+function openModal() {
+  document.getElementById('groqKey').value = config.groqKey;
+  document.getElementById('bossName').value = config.bossName;
+  document.getElementById('groqModel').value = config.groqModel;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+async function saveConfig() {
+  const gk=document.getElementById('groqKey').value.trim();
+  const bn=document.getElementById('bossName').value.trim();
+  const gm=document.getElementById('groqModel').value;
+  if(gk) config.groqKey=gk; if(bn) config.bossName=bn; config.groqModel=gm;
+  dbSet('friday_config', config);
+  closeModal();
+  addSystemMsg(`Configuration saved. Hello, ${config.bossName}.`);
+  fridaySpeak(`Configuration updated. Good to work with you, ${config.bossName}.`);
+}
+async function confirmClearChats() {
+  if(confirm('Clear all stored chat history? This cannot be undone.')){
+    await clearAllChats(); conversationHistory=[];
+    document.getElementById('chatMessages').innerHTML='';
+    addSystemMsg('Chat history cleared.'); closeModal();
+  }
+}
+
+// ============================================================
+//  STATE LOAD — instant from localStorage, then IndexedDB
+// ============================================================
+async function loadState() {
+  try {
+    // Config already loaded synchronously at top — just load data
+    const t = await dbGet('friday_tasks') || [];
+    const sc = await dbGet('friday_schedule') || [];
+    const n = await dbGet('friday_notes') || '';
+    tasks = Array.isArray(t)?t:[]; schedule=Array.isArray(sc)?sc:[];
+    if(n) document.getElementById('notesArea').value=n;
+    renderTasks(); renderSchedule();
+  } catch(e){ tasks=[]; schedule=[]; renderTasks(); renderSchedule(); }
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function flashEl(el, color) {
+  el.style.border=`1px solid ${color}`;
+  setTimeout(()=>{ el.style.border='1px solid var(--border)'; },900);
+}
+
+// ============================================================
+//  LAUNCH
+// ============================================================
+init();
+</script>
+</body>
+</html>
